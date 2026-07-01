@@ -1,5 +1,8 @@
 # avatar-service
 
+[![npm version](https://img.shields.io/badge/npm-v1.0.3-blue?logo=npm)](https://www.npmjs.com/package/avatar-service)
+[![npm](https://img.shields.io/badge/Install%20with-npm-CB3837?logo=npm)](https://www.npmjs.com/package/avatar-service)
+
 一个轻量级、可直接用于浏览器和 Node.js 的头像生成库。
 
 它可以基于 seed 生成确定性的头像，并支持两种风格：
@@ -42,6 +45,12 @@
 ---
 
 ## 安装
+
+### npm 安装
+
+```bash
+npm install avatar-service
+```
 
 ### 浏览器
 直接引入脚本即可：

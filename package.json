@@ -1,6 +1,6 @@
 {
-  "name": "@pfinal/avatar-service",
-  "version": "1.0.2",
+  "name": "avatar-service",
+  "version": "1.0.3",
   "description": "A lightweight deterministic avatar generator for browser and Node.js",
   "main": "avatar.js",
   "types": "avatar.d.ts",
