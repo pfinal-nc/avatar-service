@@ -1,0 +1,48 @@
+{
+  "name": "@pfinal/avatar-service",
+  "version": "1.0.2",
+  "description": "A lightweight deterministic avatar generator for browser and Node.js",
+  "main": "avatar.js",
+  "types": "avatar.d.ts",
+  "browser": "avatar.js",
+  "exports": {
+    ".": {
+      "require": "./avatar.js",
+      "default": "./avatar.js"
+    }
+  },
+  "scripts": {
+    "test": "node test.pure.js",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "avatar",
+    "identicon",
+    "pixel",
+    "canvas",
+    "svg",
+    "deterministic"
+  ],
+  "license": "MIT",
+  "author": "pfinal",
+  "homepage": "https://github.com/pfinal-nc/avatar-service",
+  "bugs": {
+    "url": "https://github.com/pfinal-nc/avatar-service/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pfinal-nc/avatar-service.git"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "files": [
+    "avatar.js",
+    "avatar.min.js",
+    "avatar.d.ts",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
