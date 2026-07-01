@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>avatar.js 测试</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, system-ui, sans-serif; padding: 40px; background: #f5f5f5; }
+  h1 { font-size: 24px; margin-bottom: 24px; }
+  h2 { font-size: 16px; margin: 16px 0 8px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .card img { display: block; border-radius: 4px; }
+  .card .label { font-size: 12px; color: #666; margin-top: 6px; }
+  #status { padding: 8px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+  .ok { background: #d4edda; color: #155724; }
+  .pending { background: #fff3cd; color: #856404; }
+  .err { background: #f8d7da; color: #721c24; }
+  pre { font-size: 12px; background: #eee; padding: 8px; border-radius: 4px; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>avatar.js 功能测试</h1>
+  <div id="status" class="pending">⏳ 测试运行中...</div>
+
+  <h2>Identicon 风格（不同 seed）</h2>
+  <div id="identicon-test" class="grid"></div>
+
+  <h2>Pixel 风格</h2>
+  <div id="pixel-test" class="grid"></div>
+
+  <h2>缓存命中测试（相同 seed 第二次调用）</h2>
+  <div id="cache-test" class="grid"></div>
+
+  <h2>尺寸测试</h2>
+  <div id="size-test" class="grid"></div>
+
+  <script src="avatar.js"></script>
+  <script>
+  ;(async function () {
+    const status = document.getElementById('status')
+    const results = []
+    let failed = 0
+
+    function addCard(container, label, url, extra) {
+      const card = document.createElement('div')
+      card.className = 'card'
+      card.innerHTML = `<img src="${url}" width="120" height="120"><div class="label">${label}</div>${extra || ''}`
+      container.appendChild(card)
+    }
+
+    function check(desc, ok) {
+      results.push({ desc, ok })
+      if (!ok) failed++
+      return ok
+    }
+
+    try {
+      // 1. 验证 avatar 函数存在
+      check('avatar 函数存在', typeof avatar === 'function')
+
+      // 2. Identicon 不同 seed
+      const id1 = await avatar('pfinalclub')
+      const id2 = await avatar('pfinal')
+      const id3 = await avatar('test')
+      document.getElementById('identicon-test').append(
+        ...[id1, id2, id3].map((url, i) => {
+          const card = document.createElement('div')
+          card.className = 'card'
+          card.innerHTML = `<img src="${url}" width="120" height="120"><div class="label">seed: ${['hejunjie','pfinal','test'][i]}</div>`
+          return card
+        })
+      )
+
+      // 3. Pixel 风格
+      const p1 = await avatar('pfinalclub', { style: 'pixel' })
+      const p2 = await avatar('pfinal', { style: 'pixel' })
+      document.getElementById('pixel-test').append(
+        ...[p1, p2].map((url, i) => {
+          const card = document.createElement('div')
+          card.className = 'card'
+          card.innerHTML = `<img src="${url}" width="120" height="120"><div class="label">seed: ${['hejunjie','pfinal'][i]} / pixel</div>`
+          return card
+        })
+      )
+
+      // 4. 确定性验证: 相同 seed → 完全相同
+      const id1b = await avatar('pfinalclub')
+      const detOk = id1 === id1b
+      check('确定性: 相同 seed 产生相同结果', detOk)
+      if (detOk) {
+        const card = document.createElement('div')
+        card.className = 'card'
+        card.innerHTML = `<img src="${id1}" width="120" height="120"><div class="label" style="color:green">✅ 确定性: hejunjie 两次结果一致</div>`
+        document.getElementById('cache-test').append(card)
+      }
+
+      // 5. 缓存性能测试
+      const t0 = performance.now()
+      await avatar('pfinalclub')
+      const cacheTime = performance.now() - t0
+      const cacheOk = cacheTime < 50 // 缓存命中应该 < 50ms
+      check('缓存命中: 第二次调用快速返回', cacheOk)
+      const card2 = document.createElement('div')
+      card2.className = 'card'
+      card2.innerHTML = `<div class="label">缓存命中耗时: ${cacheTime.toFixed(1)}ms ${cacheOk ? '✅' : '⚠️'}</div>`
+      document.getElementById('cache-test').append(card2)
+
+      // 6. 不同 size 测试
+      const s128 = await avatar('size-test', { size: 128 })
+      const s256 = await avatar('size-test', { size: 256 })
+      document.getElementById('size-test').append(
+        ...[s128, s256].map((url, i) => {
+          const card = document.createElement('div')
+          card.className = 'card'
+          const px = [128, 256][i]
+          card.innerHTML = `<img src="${url}" width="${px}" height="${px}"><div class="label">size: ${px}</div>`
+          return card
+        })
+      )
+
+      // 7. SVG / 视觉配置测试
+      const svgUrl = await avatar('svg-test', {
+        style: 'identicon',
+        size: 128,
+        format: 'svg',
+        foreground: '#4f46e5',
+        background: '#f8fafc',
+        margin: 0.1,
+        saturation: 0.7,
+        brightness: 0.5
+      })
+      check('SVG 输出支持', typeof svgUrl === 'string' && svgUrl.startsWith('data:image/svg+xml'))
+      const svgCard = document.createElement('div')
+      svgCard.className = 'card'
+      svgCard.innerHTML = `<img src="${svgUrl}" width="128" height="128"><div class="label">SVG + 自定义颜色/边距</div>`
+      document.getElementById('size-test').append(svgCard)
+
+      // 8. 底层纯函数测试
+      const rng1 = avatar.createRng(42)
+      const s1 = rng1()
+      const s2 = rng1()
+      const s3 = rng1()
+      // 重置 → 序列应相同
+      const rng1b = avatar.createRng(42)
+      check('createRng 确定性: seed=42 第一次调用', rng1b() === s1)
+      check('createRng 确定性: seed=42 第二次调用', rng1b() === s2)
+      check('createRng 确定性: seed=42 第三次调用', rng1b() === s3)
+
+      const rng2 = avatar.createRng(99)
+      const rng2b = avatar.createRng(99)
+      check('createRng: 不同 seed 产生不同序列', rng1() !== rng2())
+
+      // 8. bytesToInt
+      const arr = new Uint8Array([0x12, 0x34, 0x56, 0x78])
+      check('bytesToInt: 0x12345678', avatar.bytesToInt(arr) === 0x12345678)
+
+      const arr2 = new Uint8Array([0, 0, 0, 255])
+      check('bytesToInt: 255', avatar.bytesToInt(arr2) === 255)
+
+      // 结果
+      const allOk = failed === 0
+      status.className = allOk ? 'ok' : 'err'
+      status.textContent = allOk
+        ? `✅ 全部 ${results.length} 项测试通过`
+        : `❌ ${failed}/${results.length} 项失败`
+
+      console.log('avatar.js 测试结果:', results)
+    } catch (e) {
+      status.className = 'err'
+      status.textContent = '❌ 测试异常: ' + e.message
+      console.error(e)
+    }
+  })()
+  </script>
+</body>
+</html>
