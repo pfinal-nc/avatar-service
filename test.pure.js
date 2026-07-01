@@ -4,6 +4,8 @@
  */
 'use strict'
 
+const avatar = require('./avatar.js')
+
 // —— 直接拷贝纯函数（避开 browser-only 的 crypto.subtle / document） ——
 
 // createRng
@@ -29,6 +31,18 @@ let failed = 0
 function assert(desc, fn) {
   try {
     const ok = fn()
+    if (ok) { passed++; return }
+    failed++
+    console.error(`  ❌ ${desc}`)
+  } catch (e) {
+    failed++
+    console.error(`  ❌ ${desc} — 异常: ${e.message}`)
+  }
+}
+
+async function assertAsync(desc, fn) {
+  try {
+    const ok = await fn()
     if (ok) { passed++; return }
     failed++
     console.error(`  ❌ ${desc}`)
@@ -118,35 +132,72 @@ assert('中间值', () => {
   return bytesToInt(new Uint8Array([0, 128, 0, 0])) === 8388608
 })
 
-console.log('\n── 边界 ──')
+console.log('\n── hashToBytes 回退逻辑 ──')
 
-assert('只有 1 字节时索引安全', () => {
-  // bytes[1] 会是 undefined，但 *65536 → NaN，>>> 0 → 0
-  // 实际上正常使用不会传短数组，但确保不抛异常
+;(async () => {
+  await assertAsync('默认前景色应包含彩色分量', async () => {
+    const svgUrl = await avatar.generate('demo-seed', { format: 'svg', style: 'identicon', size: 64 })
+    const svg = decodeURIComponent(svgUrl.replace(/^data:image\/svg\+xml;charset=utf-8,/, ''))
+    const match = svg.match(/fill="rgb\((\d+),(\d+),(\d+)\)"/)
+    if (!match) return false
+    const [, r, g, b] = match.map(Number)
+    return !(r === g && g === b)
+  })
+
+  const originalSubtle = globalThis.crypto && globalThis.crypto.subtle
   try {
-    const r = bytesToInt(new Uint8Array([1]))
-    return typeof r === 'number'
-  } catch (_) { return false }
-})
+    if (globalThis.crypto && 'subtle' in globalThis.crypto) {
+      Object.defineProperty(globalThis.crypto, 'subtle', {
+        configurable: true,
+        value: undefined
+      })
+    }
+    await assertAsync('缺少 subtle 时仍可生成稳定哈希', async () => {
+      const bytes = await avatar.hashToBytes('demo-seed')
+      return bytes instanceof Uint8Array && bytes.length === 32
+    })
+  } finally {
+    if (originalSubtle !== undefined && globalThis.crypto && 'subtle' in globalThis.crypto) {
+      Object.defineProperty(globalThis.crypto, 'subtle', {
+        configurable: true,
+        value: originalSubtle
+      })
+    }
+  }
 
-assert('createRng + bytesToInt 集成', () => {
-  // 模拟 Pixel 的种子生成逻辑
-  const hash = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80])
-  const seed = bytesToInt(hash)
-  const rng = createRng(seed)
-  const vals = Array.from({ length: 8 }, () => rng())
-  // 同样的 hash 应产生同样的序列
-  const seed2 = bytesToInt(new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]))
-  const rng2 = createRng(seed2)
-  return vals.every((v, i) => v === rng2())
-})
+  console.log('\n── 边界 ──')
 
-// ─── 结果 ──────────────────────────────────────────────────
+  assert('只有 1 字节时索引安全', () => {
+    // bytes[1] 会是 undefined，但 *65536 → NaN，>>> 0 → 0
+    // 实际上正常使用不会传短数组，但确保不抛异常
+    try {
+      const r = bytesToInt(new Uint8Array([1]))
+      return typeof r === 'number'
+    } catch (_) { return false }
+  })
 
-console.log(`\n${'─'.repeat(30)}`)
-if (failed === 0) {
-  console.log(`✅ 全部 ${passed} 项测试通过`)
-} else {
-  console.log(`❌ ${failed} 失败 / ${passed + failed} 项`)
+  assert('createRng + bytesToInt 集成', () => {
+    // 模拟 Pixel 的种子生成逻辑
+    const hash = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80])
+    const seed = bytesToInt(hash)
+    const rng = createRng(seed)
+    const vals = Array.from({ length: 8 }, () => rng())
+    // 同样的 hash 应产生同样的序列
+    const seed2 = bytesToInt(new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]))
+    const rng2 = createRng(seed2)
+    return vals.every((v, i) => v === rng2())
+  })
+
+  // ─── 结果 ──────────────────────────────────────────────────
+
+  console.log(`\n${'─'.repeat(30)}`)
+  if (failed === 0) {
+    console.log(`✅ 全部 ${passed} 项测试通过`)
+  } else {
+    console.log(`❌ ${failed} 失败 / ${passed + failed} 项`)
+    process.exit(1)
+  }
+})().catch((err) => {
+  console.error(err)
   process.exit(1)
-}
+})

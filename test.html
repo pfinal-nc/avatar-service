@@ -67,7 +67,7 @@
         ...[id1, id2, id3].map((url, i) => {
           const card = document.createElement('div')
           card.className = 'card'
-          card.innerHTML = `<img src="${url}" width="120" height="120"><div class="label">seed: ${['hejunjie','pfinal','test'][i]}</div>`
+          card.innerHTML = `<img src="${url}" width="120" height="120"><div class="label">seed: ${['pfinalclub','pfinal','test'][i]}</div>`
           return card
         })
       )
@@ -79,7 +79,7 @@
         ...[p1, p2].map((url, i) => {
           const card = document.createElement('div')
           card.className = 'card'
-          card.innerHTML = `<img src="${url}" width="120" height="120"><div class="label">seed: ${['hejunjie','pfinal'][i]} / pixel</div>`
+          card.innerHTML = `<img src="${url}" width="120" height="120"><div class="label">seed: ${['pfinalclub','pfinal'][i]} / pixel</div>`
           return card
         })
       )
@@ -91,7 +91,7 @@
       if (detOk) {
         const card = document.createElement('div')
         card.className = 'card'
-        card.innerHTML = `<img src="${id1}" width="120" height="120"><div class="label" style="color:green">✅ 确定性: hejunjie 两次结果一致</div>`
+        card.innerHTML = `<img src="${id1}" width="120" height="120"><div class="label" style="color:green">✅ 确定性: pfinalclub 两次结果一致</div>`
         document.getElementById('cache-test').append(card)
       }
 
@@ -103,7 +103,7 @@
       check('缓存命中: 第二次调用快速返回', cacheOk)
       const card2 = document.createElement('div')
       card2.className = 'card'
-      card2.innerHTML = `<div class="label">缓存命中耗时: ${cacheTime.toFixed(1)}ms ${cacheOk ? '✅' : '⚠️'}</div>`
+      card2.innerHTML = `<img src="${id1}" width="120" height="120"><div class="label">缓存命中耗时: ${cacheTime.toFixed(1)}ms ${cacheOk ? '✅' : '⚠️'}</div>`
       document.getElementById('cache-test').append(card2)
 
       // 6. 不同 size 测试

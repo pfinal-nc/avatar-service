@@ -26,19 +26,33 @@
   }
 
   // ─── Hashing ────────────────────────────────────────────────
-  // 字符串 → SHA-256 → Uint8Array (异步, Web Crypto API)
-  // 需要 HTTPS 或 localhost 环境 (file:// 不支持)
-  const hashToBytes = (seed) => {
-    if (!crypto.subtle) {
-      return Promise.reject(
-        new Error(
-          'avatar: Web Crypto API unavailable.\n' +
-          '  Open this page via http:// or https:// (file:// not supported).\n' +
-          '  Try: npx serve .  or  python3 -m http.server'
-        )
-      )
+  // 字符串 → SHA-256 → Uint8Array (优先 Web Crypto，缺失时回退到纯 JS)
+  const fallbackHashToBytes = (seed) => {
+    const bytes = new Uint8Array(32)
+    const input = typeof seed === 'string' ? seed : String(seed)
+    const data = new TextEncoder().encode(input)
+    let state = 0x811c9dc5 >>> 0
+
+    for (let i = 0; i < data.length; i++) {
+      state ^= data[i]
+      state = Math.imul(state, 0x01000193) >>> 0
     }
-    return crypto.subtle
+
+    for (let i = 0; i < bytes.length; i++) {
+      state = (state + 0x9e3779b9 + i * 0x85ebca6b) >>> 0
+      bytes[i] = (state >>> ((i % 4) * 8)) & 0xff
+    }
+
+    return bytes
+  }
+
+  const hashToBytes = (seed) => {
+    const subtle = typeof crypto !== 'undefined' && crypto.subtle
+    if (!subtle) {
+      return Promise.resolve(fallbackHashToBytes(seed))
+    }
+
+    return subtle
       .digest('SHA-256', new TextEncoder().encode(seed))
       .then((buf) => new Uint8Array(buf))
   }
@@ -123,9 +137,11 @@
       return parseColor(options.foreground, [0, 0, 0, 255])
     }
 
-    const hue = parseInt(Array.from(hash.slice(-7), (ch) => ch.charCodeAt(0)).join(''), 10) / 0xfffffff
-    const saturation = options.saturation ?? 0.7
-    const brightness = options.brightness ?? 0.5
+    const bytes = hash instanceof Uint8Array ? hash : new Uint8Array(hash)
+    const hueSeed = (bytes[0] << 16) | (bytes[1] << 8) | bytes[2]
+    const hue = (hueSeed >>> 0) / 0xffffff
+    const saturation = options.saturation ?? 0.72
+    const brightness = options.brightness ?? 0.62
     return [...hslToRgb(hue, saturation, brightness), 255]
   }
 
